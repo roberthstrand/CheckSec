@@ -6,8 +6,7 @@ function checkDomain {
     )
     try {
         Write-Verbose "Checking if the domain exists" #-Verbose
-        $dnsCheck = Resolve-DnsName $Domain -NoHostsFile -DnsOnly -ErrorAction stop 
-        $dnsCheck = $null #clear variable
+        Resolve-DnsName $Domain -NoHostsFile -DnsOnly -ErrorAction stop | out-null
     }
     catch {
         Write-error "`n$_"
