@@ -12,7 +12,7 @@
 RootModule = 'CheckSec.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.0'
+ModuleVersion = '1.0.1'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -24,13 +24,13 @@ GUID = '4c4a0241-4d4c-48c4-af3c-ab5b611f4f89'
 Author = 'Roberth Strand'
 
 # Company or vendor of this module
-CompanyName = 'destruktive.one'
+CompanyName = ''
 
 # Copyright statement for this module
 Copyright = '(c) 2019 Roberth Strand. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'A PowerShell module for validating ..'
+Description = 'A PowerShell module for security checks related to Active Directory, DNS, E-mail and more.'
 
 # Minimum version of the Windows PowerShell engine required by this module
 # PowerShellVersion = ''

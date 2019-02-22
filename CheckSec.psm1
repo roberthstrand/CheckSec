@@ -37,8 +37,8 @@ function Get-EmailDetail {
     )
     # Check whether domain exists
     checkDomain $Domain
-    $domainMX    = Resolve-DnsName $Domain -Type MX | Select-Object NameExchange -first 1
-    $domainSPF   = Resolve-DnsName $Domain -Type TXT | Where-Object -Property Strings -Like "v=spf1*" #TODO: få bort strings
+    $domainMX    = Resolve-DnsName $Domain -Type MX | Select-Object NameExchange -first 1 #Todo: Move away from NameExchange
+    $domainSPF   = Resolve-DnsName $Domain -Type TXT | Where-Object -Property Strings -Like "v=spf1*" #TODO: Move away from ref. to strings.
     $domainDmarc = Resolve-DnsName "_dmarc.$Domain" -type TXT -ErrorAction SilentlyContinue
     # SPF
     if ($domainSPF) {
@@ -57,15 +57,25 @@ function Get-EmailDetail {
         Write-Warning "Reference: RFC7208 Section 5.5."
     }
     if ($global:spfCounter -gt 10) {
-        Write-Warning "Too many DNS mechanics"
+        Write-Warning "Too many DNS mechanism"
     }
     # DKIM
-    if ($emailDetail.MX -like "*outlook.com") {
+    if ($domainMX.NameExchange -like "*outlook.com") {
+        # Exchange Online uses selector1 and selector2._domainkey
         $dkimCheck = Resolve-DnsName selector1._domainkey.$domain -DnsOnly -ErrorAction SilentlyContinue
         if ($dkimCheck){
             $dkimPresent = $true
         } else {
             $dkimPresent = $false
+        }
+    }
+    if ($domainMX.NameExchange -like "*google.com") {
+        # G suite uses google._domainkey
+        $dkimCheck = Resolve-DnsName google._domainkey.$domain -DnsOnly -ErrorAction SilentlyContinue
+        if ($dkimCheck){
+            $dkimPresent = $false
+        } else {
+            $dkimPresent = $true
         }
     }
     # DMARC
@@ -88,7 +98,7 @@ function Get-EmailDetail {
         'MX'              = $domainMX.NameExchange
         'SpfPresent'      = $spfPresent
         'SpfRecord'       = $SpfRecord
-        'SpfDnsMechanics' = $global:spfCounter
+        'SpfDnsmechanism' = $global:spfCounter
         'SpfPtrInUse'     = $global:SpfPtr
         'DkimPresent'     = $dkimPresent
         'DmarcPresent'    = $domainDmarcPresent
