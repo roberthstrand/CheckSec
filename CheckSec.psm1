@@ -37,20 +37,20 @@ function Get-EmailDetail {
     )
     # Check whether domain exists
     checkDomain $Domain
-    $domainMX    = Resolve-DnsName $Domain -Type MX | Select-Object NameExchange -first 1 #Todo: Move away from NameExchange
-    $domainSPF   = Resolve-DnsName $Domain -Type TXT | Where-Object -Property Strings -Like "v=spf1*" #TODO: Move away from ref. to strings.
-    $domainDmarc = Resolve-DnsName "_dmarc.$Domain" -type TXT -ErrorAction SilentlyContinue
+    $domainMX    = (Resolve-DnsName $Domain -Type MX | Select-Object -ExpandProperty NameExchange -first 1).toLower()
+    $domainSPF   = (Resolve-DnsName $Domain -Type TXT | Where-Object -Property Strings -Like "v=spf1*" | Select-Object -ExpandProperty Strings).toLower()
+    $domainDmarc = (Resolve-DnsName "_dmarc.$Domain" -type TXT -ErrorAction SilentlyContinue)
     # SPF
     if ($domainSPF) {
         Write-Verbose "SPF, present!"
         $spfPresent = $true
-        $SpfRecord  = $domainSPF.strings.replace("{}","")
+        $SpfRecord  = $domainSPF.replace("{}","")
     } else {
         $spfPresent = $false
         $SpfRecord  = "N/A"
     }
     if ($domainSPF){
-        spfExtractor -SpfTxt $SpfRecord
+        spfExtractor -SpfTxt $SpfRecord.ToString()
     }
     if ($global:SpfPtr) {
         Write-Warning "Using the PTR mechanism is not recommended!"
@@ -60,7 +60,7 @@ function Get-EmailDetail {
         Write-Warning "Too many DNS mechanism"
     }
     # DKIM
-    if ($domainMX.NameExchange -like "*outlook.com") {
+    if ($domainMX -like "*outlook.com") {
         # Exchange Online uses selector1 and selector2._domainkey
         $dkimCheck = Resolve-DnsName selector1._domainkey.$domain -DnsOnly -ErrorAction SilentlyContinue
         if ($dkimCheck){
@@ -69,7 +69,7 @@ function Get-EmailDetail {
             $dkimPresent = $false
         }
     }
-    if ($domainMX.NameExchange -like "*google.com") {
+    if ($domainMX -like "*google.com") {
         # G suite uses google._domainkey
         $dkimCheck = Resolve-DnsName google._domainkey.$domain -DnsOnly -ErrorAction SilentlyContinue
         if ($dkimCheck){
@@ -95,7 +95,7 @@ function Get-EmailDetail {
     }
     [PSCustomObject]@{
         'Domain'          = $Domain
-        'MX'              = $domainMX.NameExchange
+        'MX'              = $domainMX
         'SpfPresent'      = $spfPresent
         'SpfRecord'       = $SpfRecord
         'SpfDnsmechanism' = $global:spfCounter
