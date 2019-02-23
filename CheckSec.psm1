@@ -2,7 +2,7 @@ function checkDomain {
     param (
         [Parameter(Mandatory)]
         [string]
-        $domain
+        $Domain
     )
     try {
         Write-Verbose "Checking if the domain exists"
@@ -11,6 +11,12 @@ function checkDomain {
     catch {
         Write-error "`n$_"
         Break
+    }
+    $mxCheck = Resolve-DnsName $Domain -type MX
+    if ($mxCheck.type -eq "MX") {
+        $global:mxCheck = $true
+    } else {
+        $global:mxCheck = $false
     }
 }
 function spfExtractor {
@@ -35,10 +41,12 @@ function Get-EmailDetail {
         [string]
         $Domain
     )
-    # Check whether domain exists
+    # Check whether domain exists & check if there is an MX and set it accordingly
     checkDomain $Domain
-    $domainMX    = (Resolve-DnsName $Domain -Type MX | Select-Object -ExpandProperty NameExchange -first 1).toLower()
-    $domainSPF   = (Resolve-DnsName $Domain -Type TXT | Where-Object -Property Strings -Like "v=spf1*" | Select-Object -ExpandProperty Strings).toLower()
+    if ($global:mxCheck) {
+        $domainMX = (Resolve-DnsName $Domain -Type MX -ErrorAction SilentlyContinue | Select-Object -ExpandProperty NameExchange -first 1 -ErrorAction SilentlyContinue).toLower()
+    }
+    $domainSPF   = (Resolve-DnsName $Domain -Type TXT -ErrorAction SilentlyContinue | Where-Object -Property Strings -Like "v=spf1*" | Select-Object -ExpandProperty Strings)
     $domainDmarc = (Resolve-DnsName "_dmarc.$Domain" -type TXT -ErrorAction SilentlyContinue)
     # SPF
     if ($domainSPF) {
@@ -73,9 +81,17 @@ function Get-EmailDetail {
         # G suite uses google._domainkey
         $dkimCheck = Resolve-DnsName google._domainkey.$domain -DnsOnly -ErrorAction SilentlyContinue
         if ($dkimCheck){
-            $dkimPresent = $false
-        } else {
             $dkimPresent = $true
+        } else {
+            $dkimPresent = $false
+        }
+    }
+    if ($domainMX -eq "mail.protonmail.ch") {
+        $dkimCheck = Resolve-DnsName protonmail._domainkey.$domain -DnsOnly -ErrorAction SilentlyContinue
+        if ($dkimCheck){
+            $dkimPresent = $true
+        } else {
+            $dkimPresent = $false
         }
     }
     # DMARC
