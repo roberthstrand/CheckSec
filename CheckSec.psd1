@@ -12,7 +12,7 @@
 RootModule = 'CheckSec.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.0.0'
+ModuleVersion = '2.1.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -24,10 +24,10 @@ GUID = '4c4a0241-4d4c-48c4-af3c-ab5b611f4f89'
 Author = 'Roberth Strand'
 
 # Company or vendor of this module
-CompanyName = ''
+#CompanyName = ''
 
 # Copyright statement for this module
-Copyright = '(c) 2019 Roberth Strand. All rights reserved.'
+Copyright = 'Copyright (c) 2019 Roberth Strand. MIT License.'
 
 # Description of the functionality provided by this module
 Description = 'A PowerShell module for security checks related to Active Directory, DNS, E-mail and more.'
@@ -95,7 +95,7 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        Tags = @("Security")
+        Tags = @("Security", "Email")
 
         # A URL to the license for this module.
         # LicenseUri = ''
