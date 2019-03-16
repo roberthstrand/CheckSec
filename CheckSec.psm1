@@ -12,4 +12,4 @@ Blog:    https://blog.destruktive.one
 
 # Fetching actual code:
 ## Email security
-. .\src\EmailCheck.ps1
+. $PSScriptRoot\src\EmailCheck.ps1
