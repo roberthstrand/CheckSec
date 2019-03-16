@@ -38,10 +38,9 @@ function Test-SpfRecord {
     if ($Domain) {
         $SPF = (Resolve-DnsName $Domain -Type TXT -ErrorAction SilentlyContinue | Where-Object -Property Strings -Like "v=spf1*" | Select-Object -ExpandProperty Strings).replace("{}", "").substring(7)
     }
-    # Creating array list for any include that is found in the SPF record
     [System.Collections.ArrayList]$spfIncludeList = @()
     # Split the SPF, create the counting variables and check every single mechanism
-    $spfSplit = $SPF.split(' ')
+    $spfSplit = $SPF.Split()
     $spfCountInclude = $null
     $spfCountA = $null
     $spfCountPtr = $null
@@ -49,7 +48,8 @@ function Test-SpfRecord {
     $spfCountExists = $null
     foreach ($spfMechanism in $spfSplit) {
         if ($spfMechanism -like "include:*") {
-            $spfIncludeList.add($spfMechanism.Trim('include:'))
+            $include = $spfMechanism.split(':') | Select-Object -Last 1
+            $spfIncludeList.add($include) | Out-Null
             $spfCountInclude += 1
         }
         elseif ($spfMechanism -like "a:*") {
@@ -115,7 +115,7 @@ function Test-EmailSecurity {
         do {
             $spfTest = Test-SpfRecord -Domain ($spfList | Select-Object -first 1)
             $spfList.RemoveAt(0) | Out-Null
-            foreach ($include in $spfTest.includeList) {$spfList.add($include)}
+            foreach ($include in $spfTest.includeList) {$spfList.add($include) | Out-Null}
             $spfTotalLookups += $spfTest.TotalLookups
             if ($spfTest.ptr) {
                 $spfPtr = $true
@@ -125,13 +125,12 @@ function Test-EmailSecurity {
             else {
                 $spfPtr = $false
             }
-            $spfList
         } while ($spfList)
     }
     # DKIM
     if (($domainMX -like "*outlook.com") -or ($domainSPF -like "*outlook.com*") ) {
         # Exchange Online uses selector1 and selector2._domainkey
-        $dkimCheck = Resolve-DnsName selector1._domainkey.$domain -DnsOnly -ErrorAction SilentlyContinue
+        $dkimCheck = Resolve-DnsName selector1._domainkey.$domain -Type Cname -DnsOnly -ErrorAction SilentlyContinue
         if ($dkimCheck) {
             $dkimPresent = $true
         }
