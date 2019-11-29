@@ -28,10 +28,10 @@ function checkDomain {
 function Test-SpfRecord {
     [CmdletBinding()]
     param (
-        [parameter(Position = 0, ValueFromPipeline = $true)]
+        [parameter(Position = 1)]
         [string]
         $SPF,
-        [parameter(Position = 1)]
+        [parameter(Position = 0, ValueFromPipeline = $true)]
         [string]
         $Domain
     )
