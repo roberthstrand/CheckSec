@@ -25,6 +25,49 @@ function checkDomain {
     }
     return $result
 }
+function Get-SpfRecursiveIncludeCount ($spfIncludeDomain) {
+    if ($spfIncludeDomain) {
+        $SPF = (Resolve-DnsName $spfIncludeDomain -Type TXT -ErrorAction SilentlyContinue | Where-Object -Property Strings -Like "v=spf1*" | Select-Object -ExpandProperty Strings).replace("{}", "").substring(7)
+    }
+    [System.Collections.ArrayList]$spfIncludeList = @()
+    $spfSplit = $SPF.Split()
+    $spfCountInclude = $null
+    $spfCountA = $null
+    $spfCountPtr = $null
+    $spfCountMX = $null
+    $spfCountExists = $null
+    foreach ($spfMechanism in $spfSplit) {
+        if ($spfMechanism -like "include:*") {
+            $include = $spfMechanism.split(':') | Select-Object -Last 1
+            $spfIncludeList.add($include) | Out-Null
+            $spfCountInclude += 1
+        }
+        elseif (($spfMechanism -like "a:*") -or ($spfMechanism -eq "a")) {
+            $spfCountA += 1
+        }
+        elseif ($spfMechanism -like "ptr:*") {
+            $spfCountPtr += 1
+            Write-Warning $spfMechanism
+        }
+        elseif (($spfMechanism -like "mx:*") -or ($spfMechanism -eq "mx")) {
+            $spfCountMX += 1
+        }
+        elseif ($spfMechanism -like "exists:*") {
+            $spfCountExists += 1
+        }
+    }
+    $spfCountRecursiveInclude = 0
+    if ($spfIncludeList.Count -gt 0 ) {
+        foreach ($includeRecord in $spfIncludeList){
+            $result = Get-SpfRecursiveIncludeCount $includeRecord
+            $spfCountRecursiveInclude += $result
+        }
+    }
+
+
+    $spfRecursiveTotalLookups = ($spfCountInclude + $spfCountA + $spfCountPtr + $spfCountMX + $spfCountExists + $spfCountRecursiveInclude)
+    return $spfRecursiveTotalLookups
+}
 function Test-SpfRecord {
     [CmdletBinding()]
     param (
@@ -52,14 +95,14 @@ function Test-SpfRecord {
             $spfIncludeList.add($include) | Out-Null
             $spfCountInclude += 1
         }
-        elseif ($spfMechanism -like "a:*") {
+        elseif (($spfMechanism -like "a:*") -or ($spfMechanism -eq "a")) {
             $spfCountA += 1
         }
         elseif ($spfMechanism -like "ptr:*") {
             $spfCountPtr += 1
             Write-Warning $spfMechanism
         }
-        elseif ($spfMechanism -like "mx:*") {
+        elseif (($spfMechanism -like "mx:*") -or ($spfMechanism -eq "mx")) {
             $spfCountMX += 1
         }
         elseif ($spfMechanism -like "exists:*") {
@@ -73,18 +116,27 @@ function Test-SpfRecord {
             $spfAllQualifier = $spfMechanism.trim("all")
         }
     }
+    $spfCountRecursiveInclude = 0
+    if ($spfIncludeList.Count -gt 0 ) {
+        foreach ($includeRecord in $spfIncludeList){
+            $result = Get-SpfRecursiveIncludeCount $includeRecord
+            $spfCountRecursiveInclude += $result
+        }
+    }
+
     # Total count of mechanisms that triggers DNS lookups
-    $spfTotalLookups = ($spfCountInclude + $spfCountA + $spfCountPtr + $spfCountMX + $spfCountExists)
+    $spfTotalLookups = ($spfCountInclude + $spfCountA + $spfCountPtr + $spfCountMX + $spfCountExists + $spfCountRecursiveInclude)
     # Create a PSCustomObject and return it as the result
     $result = [PSCustomObject]@{
-        'TotalLookups' = $spfTotalLookups
-        'includes'     = $spfCountInclude
+        'TotalLookups'               = $spfTotalLookups
+        'includesCount'              = $spfCountInclude
+        'includesRecursiveCount'     = $spfCountRecursiveInclude
+        'includeList'                = $spfIncludeList
         'a'            = $spfCountA
         'ptr'          = $spfCountPtr
         'mx'           = $spfCountMX
         'exists'       = $spfCountExists
         'All'          = $spfAllQualifier
-        'includeList'  = $spfIncludeList
     }
     $result.psobject.TypeNames.Insert(0, "Test-SpfRecord")
     return $result
@@ -110,7 +162,7 @@ function Test-EmailSecurity {
     }
     else {
         $spfPresent = $true
-        [System.Collections.ArrayList]$spfList = @() 
+        [System.Collections.ArrayList]$spfList = @()
         $spfList.add($domain) | Out-Null
         do {
             $spfTest = Test-SpfRecord -Domain ($spfList | Select-Object -first 1)
